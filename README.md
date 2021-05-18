@@ -2,11 +2,11 @@
 
 <img src="assets/k8s-certmanager.png"/>
 
-SSL certificate is a single most crucial component enabling secure communication between server and client. When deploying a fleet of services on Kubernetes, securing both the internal and external network traffic can be tricky. To our rescue comes, **Cert-manager**, a Kubernetes native certificate manager.
+SSL certificate is a single most crucial component enabling secure communication between server and client. When deploying a fleet of services on Kubernetes, securing both the internal and external network traffic can be tricky. To our rescue comes **Cert-manager**, a Kubernetes native certificate manager.
 
 <br/>
 
-At the end of this tutorial we'll have secure cluster Ingress traffic with a free SSL certificate issued from **Let's Encrypt** using cert-manager.
+At the end of this tutorial we'll have secure cluster ingress traffic with a free SSL certificate issued from **Let's Encrypt** using cert-manager.
 
 ## What is cert-manager?
 
@@ -18,7 +18,7 @@ It will ensure certificates are valid and up to date, and attempt to renew certi
 
 <br/>
 
-Well cert-manager comprises of a variety of components and extensions, but we'll discuss those that are required for this tutorial. Check out related concepts [here](https://cert-manager.io/docs/concepts/).
+Well cert-manager comprises of a variety of components and extensions, but we'll discuss those that are required for this tutorial. Do check out related concepts [here](https://cert-manager.io/docs/concepts/).
 
 <br/>
 
@@ -32,13 +32,13 @@ Well cert-manager comprises of a variety of components and extensions, but we'll
 
 ## Requirements
 
-Kubernetes cluster installed with Nginx-ingress and accessible with kubectl is required. I am using Kind to deploy a test kubernetes cluster, but you can choose any distribution of kubernetes.
+Kubernetes cluster installed with `Nginx-ingress` and accessible with `kubectl` is required. I am using [Kind](https://kind.sigs.k8s.io/) to deploy a test kubernetes cluster, but you can choose any distribution of kubernetes of your choice.
 
-For using Kind, refer it's installation docs.
+For using Kind, you may refer it's [installation docs](https://kind.sigs.k8s.io/docs/user/quick-start/).
 
 ## Installing cert-manager with regular manifests
 
-Install the `CustomResourceDefinitions` and `cert-manager` itself:
+Install the `CustomResourceDefinitions` and `cert-manager`:
 
 ```bash
 kubectl create ns cert-manager
@@ -52,7 +52,7 @@ You can download any other stable release for `cert-manager` from it's [releases
 
 <br/>
 
-It's a good practice to store the yaml files that you apply to cluster, in case something goes wrong you can restore the state of cluster by re-applying them. To store the cert-manager manifest we just applied
+It's a good practice to store the yaml files that you apply to cluster, in case something goes wrong you can restore the state of cluster by re-applying them. To store the cert-manager manifest we just applied, run the following scripts.
 
 ```bash
 curl -LO https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
@@ -89,7 +89,7 @@ replicaset.apps/cert-manager-webhook-578954cdd       1         1         1      
 
 ## Deploying sample app
 
-For testing the working of issued SSL certificate, let's deploy a simple REST api in the cluster as well. Once deployed we'll route the traffic to this app using ingress.
+For testing issued SSL certificate, let's deploy a simple REST api in the cluster as well. Once deployed we'll route the traffic to this app using `nginx-ingress`.
 
 <br/>
 
@@ -106,15 +106,17 @@ Do make sure service and deployment components are up and running.
 
 ## Setting up domain and ingress controller
 
-Since we'll obtain SSL certificate from let's encrypt, in order to verify ownership of the domain, let's encrypt will send a [ACME](https://cert-manager.io/docs/configuration/acme/) challenge. So before setting up Issuer and certifcate we need to point our domain name to our cluster.
+Since we'll obtain SSL certificate from `let's encrypt`, in order to verify ownership of the domain, let's encrypt will send a [ACME](https://cert-manager.io/docs/configuration/acme/) challenge. So before setting up Issuer and certifcate we need to point our domain name to our cluster.
 
 <br/>
 
-If you are using a cloud provider point domain to the load balancer, for kind cluster or any bare metal setup pointing to public IP of host machine will work fine.
+If you are using a cloud provider point domain to the `load balancer`, for kind cluster or any other bare metal setup pointing to public IP of host machine will work fine.
 
 <br/>
 
-Also make sure the ingress controller is working and accepting traffic from the domain. To do so visit `your-domain.com`, and you should be able to see a 404 Not Found page. This indicates there are no routes to `/` and the ingress controller is running.
+Also make sure the ingress controller is running and accepting traffic for your domain. Ping `your-domain.com`, and you should be able to see a 404 Not Found page. This indicates there are no routes to `/` and the ingress controller is running.
+
+If you are not able to get above result, make sure nginx-ingress is installed and enabled inside the cluster. Refer it's installation guide [here](https://kubernetes.github.io/ingress-nginx/deploy/).
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -143,11 +145,13 @@ Copy the above code to `ingress.yaml` and apply it in default namespace.
 kubectl apply -f ./ingress.yaml
 ```
 
+To verify the routing, access any endpoint of your REST api.
+
 ## Let's issue a free SSL!
 
 Files used in this section is present in [certmanager](https://github.com/Akshit8/k8s-certmanager/tree/master/certmanager) dir.
 
-**Step 1 is to create a Let's Encrypt Issuer for our cluster** <br/>
+**Step 1 Create a Let's Encrypt Issuer for our cluster** <br/>
 
 With creating a ClusterIssuer, allows us to issue and manage certificate in any namespace.
 
@@ -182,7 +186,7 @@ Status:
 Events:                    <none>
 ```
 
-**Step 2 is to issue a certificate for our domain** <br/>
+**Step 2 Issue a certificate for our domain** <br/>
 
 ```bash
 kubectl apply -f certificate.yaml
@@ -215,7 +219,9 @@ NAME                       TYPE                                  DATA   AGE
 cert-manager-app-tls       kubernetes.io/tls                     2      84m
 ```
 
-**Step 3 is to update the ingress to enforce issued SSL** <br/>
+To learn more about kubernetes secret and tls click [here](https://kubernetes.io/docs/concepts/configuration/secret/).
+
+**Step 3 Update the ingress to enforce issued SSL** <br/>
 
 Copy the ingress configuration from [certmanager/ingress.yaml](https://github.com/Akshit8/k8s-certmanager/blob/master/certmanager/ingress.yaml) and paste it inside `ingress.yaml`
 
@@ -223,15 +229,17 @@ Copy the ingress configuration from [certmanager/ingress.yaml](https://github.co
 kubectl apply -f ./ingress.yaml
 ```
 
-Open the link https://your-domain.com inside browser and you'll be able to see the lock sign ensuring that SSL certificate is installed and payload to & from server is encrypted.
+Open the link https://your-domain.com inside browser and you'll be able to see the lock sign(left to the domain) ensuring that SSL certificate is installed and payload to-from server is encrypted.
 
 ## Conclusion
 
 While their are many ways to setup SSL certificates inside your cluster, I like to use certmanager as it's
 
 - Easy to install.
-- Support for ACME (Let's Encrypt), HashiCorp Vault, Venafi, self signed and internal certificate authorities.
-- Provide easy to use tools to manage certificates.
+- Supports ACME (Let's Encrypt), HashiCorp Vault, Venafi, self signed and internal certificate authorities.
+- Provide tools to manage certificates.
+
+If you want to use any other CA or configuration, checkout [certmanager-configuration-docs](https://cert-manager.io/docs/configuration/)
 
 ## Author
 
